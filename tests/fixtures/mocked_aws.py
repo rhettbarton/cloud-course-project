@@ -18,7 +18,7 @@ def point_away_from_aws():
 
 
 @fixture
-def mocked_aws():
+def mocked_aws() -> None:
     with mock_aws():
         # point away from AWS (to be extra careful)
         point_away_from_aws()
