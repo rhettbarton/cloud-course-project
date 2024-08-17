@@ -12,6 +12,8 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
 from files_api.s3.delete_objects import delete_s3_object
 from files_api.s3.read_objects import (
     fetch_s3_object,
@@ -20,7 +22,6 @@ from files_api.s3.read_objects import (
     object_exists_in_s3,
 )
 from files_api.s3.write_objects import upload_s3_object
-from pydantic import BaseModel
 
 #####################
 # --- Constants --- #
@@ -42,7 +43,9 @@ class FileMetadata(BaseModel):
     size_bytes: int
 
 
-# more pydantic models ...
+class PutFileResponse(BaseModel):
+    file_path: str
+    message: str
 
 
 ##################
@@ -51,15 +54,38 @@ class FileMetadata(BaseModel):
 
 
 @APP.put("/files/{file_path:path}")
-async def upload_file(file_path: str, file: UploadFile, response: Response) -> ...:
+async def upload_file(file_path: str, file: UploadFile, response: Response) -> PutFileResponse:
     """Upload a file."""
-    ...
+
+    # Read the file contents
+    file_contents: bytes = await file.read()
+    # Check if the file already exists
+    object_exists = object_exists_in_s3(bucket_name=S3_BUCKET_NAME, object_key=file_path)
+
+    if object_exists:
+        response_message = f"Exisiting file update at path: {file_path}"
+        response.status_code = status.HTTP_200_OK
+    else:
+        response_message = f"New file uploaded at path: {file_path}"
+        response.status_code = status.HTTP_201_CREATED
+
+    upload_s3_object(
+        bucket_name=S3_BUCKET_NAME,
+        object_key=file_path,
+        file_content=file_contents,
+        content_type=file.content_type,
+    )
+
+    return PutFileResponse(
+        file_path=file_path,
+        message=response_message,
+    )
 
 
 @APP.get("/files")
 async def list_files(
     query_params=...,
-) -> ...:
+):
     """List files with pagination."""
     ...
 
@@ -76,7 +102,7 @@ async def get_file_metadata(file_path: str, response: Response) -> Response:
 @APP.get("/files/{file_path:path}")
 async def get_file(
     file_path: str,
-) -> ...:
+):
     """Retrieve a file."""
     ...
 

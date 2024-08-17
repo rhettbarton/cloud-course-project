@@ -36,5 +36,3 @@ def upload_s3_object(
         Body=file_content,
         ContentType=content_type,
     )
-
-    return
