@@ -4,6 +4,12 @@
 #
 # See run.sh for more in-depth comments on what each target does.
 
+run:
+	bash run.sh run
+
+run-mock:
+	bash run.sh run-mock
+
 build:
 	bash run.sh build
 
