@@ -1,4 +1,5 @@
 import stat
+from calendar import c
 from wsgiref import headers
 
 import pytest
@@ -10,7 +11,7 @@ from src.files_api.main import APP
 
 # Fixture for FastAPI test client
 @pytest.fixture
-def client(mocked_aws) -> TestClient:  # pylint: disable=unused-argument
+def client(mocked_aws: None) -> TestClient:  # pylint: disable=unused-argument
     with TestClient(APP) as client:
         yield client
 
@@ -43,7 +44,44 @@ def test__upload_file__happy_path(client: TestClient):
     }
 
 
-def test_list_files_with_pagination(client: TestClient): ...
+def test__list_files_with_pagination(client: TestClient):
+    # create a few files
+    file_paths = [
+        "file1.txt",
+        "file2.txt",
+        "file3.txt",
+        "subfolder/file4.txt",
+        "subfolder/file5.txt",
+    ]
+    for file_path in file_paths:
+        client.put(
+            f"/files/{file_path}",
+            files={"file": (file_path, b"test file contents", "text/plain")},
+        )
+
+    # list files with default page size
+    response = client.get("/files")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.json()["files"]) == 5
+    assert response.json()["next_page_token"] is None
+
+    # list files with page size 2
+    response = client.get("/files?page_size=2")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.json()["files"]) == 2
+    assert response.json()["next_page_token"] is not None
+
+    # list files with page size 2 and page token
+    response = client.get(f"/files?page_size=2&page_token={response.json()['next_page_token']}")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.json()["files"]) == 2
+    assert response.json()["next_page_token"] is not None
+
+    # list files with directory and page size 1
+    response = client.get("/files?directory=subfolder&page_size=1")
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.json()["files"]) == 1
+    assert response.json()["next_page_token"] is not None
 
 
 def test_get_file_metadata(client: TestClient): ...
