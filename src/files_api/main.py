@@ -48,6 +48,18 @@ class PutFileResponse(BaseModel):
     message: str
 
 
+class GetFilesResponse(BaseModel):
+    files: List[FileMetadata]
+    next_page_token: Optional[str]
+
+
+# read (cRud)
+class GetFilesQueryParams(BaseModel):
+    page_size: int = 10
+    directory: Optional[str] = ""
+    page_token: Optional[str] = None
+
+
 ##################
 # --- Routes --- #
 ##################
@@ -84,10 +96,31 @@ async def upload_file(file_path: str, file: UploadFile, response: Response) -> P
 
 @APP.get("/files")
 async def list_files(
-    query_params=...,
-):
+    query_params: GetFilesQueryParams = Depends(),
+) -> GetFilesResponse:
     """List files with pagination."""
-    ...
+    if query_params.page_token:
+        files, next_page_token = fetch_s3_objects_using_page_token(
+            bucket_name=S3_BUCKET_NAME,
+            continuation_token=query_params.page_token,
+            max_keys=query_params.page_size,
+        )
+    else:
+        files, next_page_token = fetch_s3_objects_metadata(
+            bucket_name=S3_BUCKET_NAME,
+            prefix=query_params.directory,
+            max_keys=query_params.page_size,
+        )
+
+    file_metadata_objs = [
+        FileMetadata(
+            file_path=f"{item['Key']}",
+            last_modified=item["LastModified"],
+            size_bytes=item["Size"],
+        )
+        for item in files
+    ]
+    return GetFilesResponse(files=file_metadata_objs, next_page_token=next_page_token if next_page_token else None)
 
 
 @APP.head("/files/{file_path:path}")
@@ -96,7 +129,8 @@ async def get_file_metadata(file_path: str, response: Response) -> Response:
 
     Note: by convention, HEAD requests MUST NOT return a body in the response.
     """
-    return
+    fetch_s3_objects_metadata(bucket_name=S3_BUCKET_NAME, prefix=file_path)
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @APP.get("/files/{file_path:path}")
