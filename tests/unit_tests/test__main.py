@@ -1,3 +1,4 @@
+import re
 import stat
 from calendar import c
 from wsgiref import headers
@@ -84,7 +85,23 @@ def test__list_files_with_pagination(client: TestClient):
     assert response.json()["next_page_token"] is not None
 
 
-def test_get_file_metadata(client: TestClient): ...
+def test_get_file_metadata(client: TestClient):
+    # create a file
+    test_file_path = "some/nested/file.txt"
+    test_file_contents = b"test file contents"
+    test_file_content_type = "text/plain"
+
+    client.put(
+        f"/files/{test_file_path}",
+        files={"file": (test_file_path, test_file_contents, test_file_content_type)},
+    )
+
+    response = client.head(f"/files/{test_file_path}")
+
+    assert response.headers["Content-Type"] == test_file_content_type
+    assert response.headers["Content-Length"] == str(len(test_file_contents))
+    assert response.headers["Last-Modified"] is not None
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_get_file(client: TestClient): ...

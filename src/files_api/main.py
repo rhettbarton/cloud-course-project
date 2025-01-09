@@ -75,7 +75,7 @@ async def upload_file(file_path: str, file: UploadFile, response: Response) -> P
     object_exists = object_exists_in_s3(bucket_name=S3_BUCKET_NAME, object_key=file_path)
 
     if object_exists:
-        response_message = f"Exisiting file update at path: {file_path}"
+        response_message = f"Exisiting file updated at path: {file_path}"
         response.status_code = status.HTTP_200_OK
     else:
         response_message = f"New file uploaded at path: {file_path}"
@@ -129,8 +129,12 @@ async def get_file_metadata(file_path: str, response: Response) -> Response:
 
     Note: by convention, HEAD requests MUST NOT return a body in the response.
     """
-    fetch_s3_objects_metadata(bucket_name=S3_BUCKET_NAME, prefix=file_path)
-    return Response(status_code=status.HTTP_200_OK)
+    get_object_response = fetch_s3_object(S3_BUCKET_NAME, object_key=file_path)
+    response.headers["Content-Type"] = get_object_response["ContentType"]
+    response.headers["Content-Length"] = str(get_object_response["ContentLength"])
+    response.headers["Last-Modified"] = get_object_response["LastModified"].strftime("%a, %d %b %Y %H:%M:%S GMT")
+    response.status_code = status.HTTP_200_OK
+    return response
 
 
 @APP.get("/files/{file_path:path}")
