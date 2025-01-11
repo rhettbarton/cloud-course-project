@@ -140,9 +140,13 @@ async def get_file_metadata(file_path: str, response: Response) -> Response:
 @APP.get("/files/{file_path:path}")
 async def get_file(
     file_path: str,
-):
+) -> StreamingResponse:
     """Retrieve a file."""
-    ...
+    get_object_response = fetch_s3_object(S3_BUCKET_NAME, object_key=file_path)
+    return StreamingResponse(
+        content=get_object_response["Body"],
+        media_type=get_object_response["ContentType"],
+    )
 
 
 @APP.delete("/files/{file_path:path}")
