@@ -122,4 +122,18 @@ def test_get_file(client: TestClient):
     assert response.content == test_file_contents
 
 
-def test_delete_file(client: TestClient): ...
+def test_delete_file(client: TestClient):
+    # create a file
+    test_file_path = "some/nested/file.txt"
+    test_file_contents = b"test file contents"
+    test_file_content_type = "text/plain"
+
+    client.put(
+        f"/files/{test_file_path}",
+        files={"file": (test_file_path, test_file_contents, test_file_content_type)},
+    )
+
+    response = client.delete(f"/files/{test_file_path}")
+    print(response.status_code)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT

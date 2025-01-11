@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import (
     List,
@@ -157,7 +158,9 @@ async def delete_file(
     """Delete a file.
 
     NOTE: DELETE requests MUST NOT return a body in the response."""
-    return
+    delete_s3_object(bucket_name=S3_BUCKET_NAME, object_key=file_path)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 if __name__ == "__main__":
