@@ -42,7 +42,7 @@ def test__upload_file__happy_path(client: TestClient):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "file_path": test_file_path,
-        "message": f"Exisiting file update at path: {test_file_path}",
+        "message": f"Existing file updated at path: {test_file_path}",
     }
 
 
