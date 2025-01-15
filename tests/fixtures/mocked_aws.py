@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from files_api.main import S3_BUCKET_NAME as TEST_BUCKET_NAME
+from tests.consts import TEST_BUCKET_NAME
 
 
 # Set the environment variables to point away from AWS
