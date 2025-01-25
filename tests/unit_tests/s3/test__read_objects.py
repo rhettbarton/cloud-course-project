@@ -1,7 +1,5 @@
 """Test cases for `s3.read_objects`."""
 
-import os
-from unittest import mock
 
 import boto3
 from moto import mock_aws

@@ -1,6 +1,5 @@
 """Test cases for `s3.write_objects`."""
 
-import os
 
 import boto3
 from moto import mock_aws

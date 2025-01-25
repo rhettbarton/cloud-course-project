@@ -1,6 +1,5 @@
 """Test cases for `s3.delete_objects`."""
 
-import boto3
 from moto import mock_aws
 
 from files_api.s3.delete_objects import delete_s3_object

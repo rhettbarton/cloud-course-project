@@ -1,9 +1,3 @@
-import re
-import stat
-from calendar import c
-from urllib import response
-from wsgiref import headers
-
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
