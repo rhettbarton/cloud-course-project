@@ -16,7 +16,12 @@ from files_api.s3.read_objects import (
     object_exists_in_s3,
 )
 from files_api.s3.write_objects import upload_s3_object
-from files_api.schemas import *
+from files_api.schemas import (
+    FileMetadata,
+    GetFilesQueryParams,
+    GetFilesResponse,
+    PutFileResponse,
+)
 
 ##################
 # --- Routes --- #
@@ -28,11 +33,11 @@ ROUTER = APIRouter()
 @ROUTER.put("/files/{file_path:path}")
 async def upload_file(request: Request, file_path: str, file: UploadFile, response: Response) -> PutFileResponse:
     """Upload a file."""
-    s3_bucket_name = request.app.state.s3_bucket_name
+    settings = request.app.state.settings
     # Read the file contents
     file_contents: bytes = await file.read()
     # Check if the file already exists
-    object_exists = object_exists_in_s3(bucket_name=s3_bucket_name, object_key=file_path)
+    object_exists = object_exists_in_s3(bucket_name=settings.s3_bucket_name, object_key=file_path)
 
     if object_exists:
         response_message = f"Existing file updated at path: {file_path}"
@@ -42,7 +47,7 @@ async def upload_file(request: Request, file_path: str, file: UploadFile, respon
         response.status_code = status.HTTP_201_CREATED
 
     upload_s3_object(
-        bucket_name=s3_bucket_name,
+        bucket_name=settings.s3_bucket_name,
         object_key=file_path,
         file_content=file_contents,
         content_type=file.content_type,
@@ -60,16 +65,16 @@ async def list_files(
     query_params: GetFilesQueryParams = Depends(),
 ) -> GetFilesResponse:
     """List files with pagination."""
-    s3_bucket_name = request.app.state.s3_bucket_name
+    settings = request.app.state.settings
     if query_params.page_token:
         files, next_page_token = fetch_s3_objects_using_page_token(
-            bucket_name=s3_bucket_name,
+            bucket_name=settings.s3_bucket_name,
             continuation_token=query_params.page_token,
             max_keys=query_params.page_size,
         )
     else:
         files, next_page_token = fetch_s3_objects_metadata(
-            bucket_name=s3_bucket_name,
+            bucket_name=settings.s3_bucket_name,
             prefix=query_params.directory,
             max_keys=query_params.page_size,
         )
@@ -91,8 +96,8 @@ async def get_file_metadata(request: Request, file_path: str, response: Response
 
     Note: by convention, HEAD requests MUST NOT return a body in the response.
     """
-    s3_bucket_name = request.app.state.s3_bucket_name
-    get_object_response = fetch_s3_object(s3_bucket_name, object_key=file_path)
+    settings = request.app.state.settings
+    get_object_response = fetch_s3_object(settings.s3_bucket_name, object_key=file_path)
     response.headers["Content-Type"] = get_object_response["ContentType"]
     response.headers["Content-Length"] = str(get_object_response["ContentLength"])
     response.headers["Last-Modified"] = get_object_response["LastModified"].strftime("%a, %d %b %Y %H:%M:%S GMT")
@@ -106,8 +111,8 @@ async def get_file(
     file_path: str,
 ) -> StreamingResponse:
     """Retrieve a file."""
-    s3_bucket_name = request.app.state.s3_bucket_name
-    get_object_response = fetch_s3_object(s3_bucket_name, object_key=file_path)
+    settings = request.app.state.settings
+    get_object_response = fetch_s3_object(settings.s3_bucket_name, object_key=file_path)
     return StreamingResponse(
         content=get_object_response["Body"],
         media_type=get_object_response["ContentType"],
@@ -123,7 +128,7 @@ async def delete_file(
     """Delete a file.
 
     NOTE: DELETE requests MUST NOT return a body in the response."""
-    s3_bucket_name = request.app.state.s3_bucket_name
-    delete_s3_object(bucket_name=s3_bucket_name, object_key=file_path)
+    settings = request.app.state.settings
+    delete_s3_object(bucket_name=settings.s3_bucket_name, object_key=file_path)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
